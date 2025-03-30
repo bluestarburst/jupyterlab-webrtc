@@ -4,16 +4,7 @@
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
 import { KernelMessage } from './kernel';
 import { deserialize, serialize } from './kernel/serialize';
-
-let WEBSOCKET: typeof WebSocket;
-
-if (typeof window === 'undefined') {
-  // Mangle the require statements so it does not get picked up in the
-  // browser assets.
-  WEBSOCKET = require('ws');
-} else {
-  WEBSOCKET = WebSocket;
-}
+import { WebRTC } from './webrtc';
 
 interface ISerializer {
   /**
@@ -141,12 +132,69 @@ export namespace ServerConnection {
    * If there is no body data, we set the content type to `application/json`
    * because it is required by the Notebook server.
    */
-  export function makeRequest(
+  export async function makeRequest(
     url: string,
     init: RequestInit,
     settings: ISettings
   ): Promise<Response> {
-    return Private.handleRequest(url, init, settings);
+    // Handle notebook server requests.
+    if (url.indexOf(settings.baseUrl) !== 0) {
+      throw new Error('Can only be used for notebook server requests');
+    }
+
+    // Use explicit cache buster when `no-store` is set since
+    // not all browsers use it properly.
+    const cache = init.cache ?? settings.init.cache;
+    if (cache === 'no-store') {
+      url += (/\?/.test(url) ? '&' : '?') + new Date().getTime();
+    }
+
+    const request = new settings.Request(url, { ...settings.init, ...init });
+
+    // Handle authentication
+    let authenticated = false;
+    if (settings.token) {
+      authenticated = true;
+      request.headers.append('Authorization', `token ${settings.token}`);
+    }
+    if (typeof document !== 'undefined') {
+      const xsrfToken = getCookie('_xsrf');
+      if (xsrfToken !== undefined) {
+        authenticated = true;
+        request.headers.append('X-XSRFToken', xsrfToken);
+      }
+    }
+
+    // Set the content type if there is no given data and we are
+    // using an authenticated connection.
+    if (!request.headers.has('Content-Type') && authenticated) {
+      request.headers.set('Content-Type', 'application/json');
+    }
+
+    // Convert request to WebRTC message
+    const method = init.method || 'GET';
+    const body = init.body ? JSON.parse(init.body as string) : {};
+
+    // Send request through WebRTC
+    WebRTC.sendMessage('sudo_http_request', {
+      url: url.replace(settings.baseUrl, ''),
+      method,
+      body
+    });
+
+    // Wait for response
+    return new Promise((resolve, reject) => {
+      const responseHandler = (data: any) => {
+        WebRTC.removeActionListener('sudo_http_response', responseHandler);
+        const responseObject = new Response(data.data, {
+          status: data.status,
+          headers: data.headers
+        });
+        resolve(responseObject);
+      };
+
+      WebRTC.addActionListener('sudo_http_response', responseHandler);
+    });
   }
 
   /**
@@ -263,7 +311,7 @@ namespace Private {
       fetch,
       Headers,
       Request,
-      WebSocket: WEBSOCKET,
+      WebSocket,
       token: PageConfig.getToken(),
       appUrl: PageConfig.getOption('appUrl'),
       appendToken,
@@ -273,83 +321,20 @@ namespace Private {
       wsUrl
     };
   }
+}
 
-  /**
-   * Handle a request.
-   *
-   * @param url - The url for the request.
-   *
-   * @param init - The overrides for the request init.
-   *
-   * @param settings - The settings object for the request.
-   *
-   * #### Notes
-   * The `url` must start with `settings.baseUrl`.  The `init` settings
-   * take precedence over `settings.init`.
-   */
-  export function handleRequest(
-    url: string,
-    init: RequestInit,
-    settings: ServerConnection.ISettings
-  ): Promise<Response> {
-    // Handle notebook server requests.
-    if (url.indexOf(settings.baseUrl) !== 0) {
-      throw new Error('Can only be used for notebook server requests');
-    }
-
-    // Use explicit cache buster when `no-store` is set since
-    // not all browsers use it properly.
-    const cache = init.cache ?? settings.init.cache;
-    if (cache === 'no-store') {
-      // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest#Bypassing_the_cache
-      url += (/\?/.test(url) ? '&' : '?') + new Date().getTime();
-    }
-
-    const request = new settings.Request(url, { ...settings.init, ...init });
-
-    // Handle authentication. Authentication can be overdetermined by
-    // settings token and XSRF token.
-    let authenticated = false;
-    if (settings.token) {
-      authenticated = true;
-      request.headers.append('Authorization', `token ${settings.token}`);
-    }
-    if (typeof document !== 'undefined') {
-      const xsrfToken = getCookie('_xsrf');
-      if (xsrfToken !== undefined) {
-        authenticated = true;
-        request.headers.append('X-XSRFToken', xsrfToken);
-      }
-    }
-
-    // Set the content type if there is no given data and we are
-    // using an authenticated connection.
-    if (!request.headers.has('Content-Type') && authenticated) {
-      request.headers.set('Content-Type', 'application/json');
-    }
-
-    // Use `call` to avoid a `TypeError` in the browser.
-    return settings.fetch.call(null, request).catch((e: TypeError) => {
-      // Convert the TypeError into a more specific error.
-      throw new ServerConnection.NetworkError(e);
-    });
-    // TODO: *this* is probably where we need a system-wide connectionFailure
-    // signal we can hook into.
+/**
+ * Get a cookie from the document.
+ */
+function getCookie(name: string): string | undefined {
+  // From http://www.tornadoweb.org/en/stable/guide/security.html
+  let cookie = '';
+  try {
+    cookie = document.cookie;
+  } catch (e) {
+    // e.g. SecurityError in case of CSP Sandbox
+    return;
   }
-
-  /**
-   * Get a cookie from the document.
-   */
-  function getCookie(name: string): string | undefined {
-    // From http://www.tornadoweb.org/en/stable/guide/security.html
-    let cookie = '';
-    try {
-      cookie = document.cookie;
-    } catch (e) {
-      // e.g. SecurityError in case of CSP Sandbox
-      return;
-    }
-    const matches = cookie.match('\\b' + name + '=([^;]*)\\b');
-    return matches?.[1];
-  }
+  const matches = cookie.match('\\b' + name + '=([^;]*)\\b');
+  return matches?.[1];
 }
