@@ -1,14 +1,14 @@
 {
-  "name": "@jupyterlab/application",
-  "version": "4.4.0-rc.0",
+  "name": "@jupyterlab-webrtc/application",
+  "version": "0.0.1",
   "description": "JupyterLab - Application",
-  "homepage": "https://github.com/jupyterlab/jupyterlab",
+  "homepage": "https://github.com/bluestarburst/jupyterlab-webrtc",
   "bugs": {
-    "url": "https://github.com/jupyterlab/jupyterlab/issues"
+    "url": "https://github.com/bluestarburst/jupyterlab-webrtc/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jupyterlab/jupyterlab.git"
+    "url": "https://github.com/bluestarburst/jupyterlab-webrtc.git"
   },
   "license": "BSD-3-Clause",
   "author": "Project Jupyter",
