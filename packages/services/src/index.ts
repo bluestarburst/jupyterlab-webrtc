@@ -21,5 +21,6 @@ export * from './tokens';
 export * from './user';
 export * from './workspace';
 export * from './nbconvert';
+export * from './webrtc';
 
 export { Builder } from './builder';
