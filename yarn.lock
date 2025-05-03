@@ -2171,6 +2171,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@jupyterlab-webrtc/services@workspace:packages/services":
+  version: 0.0.0-use.local
+  resolution: "@jupyterlab-webrtc/services@workspace:packages/services"
+  dependencies:
+    "@jupyter/ydoc": ^3.0.4
+    "@jupyterlab/coreutils": ^6.4.1
+    "@jupyterlab/nbformat": ^4.4.1
+    "@jupyterlab/settingregistry": ^4.4.1
+    "@jupyterlab/statedb": ^4.4.1
+    "@jupyterlab/testing": ^4.4.1
+    "@lumino/coreutils": ^2.2.1
+    "@lumino/disposable": ^2.1.4
+    "@lumino/polling": ^2.1.4
+    "@lumino/properties": ^2.0.3
+    "@lumino/signaling": ^2.1.4
+    "@types/jest": ^29.2.0
+    "@types/ws": ^8.5.3
+    jest: ^29.2.0
+    rimraf: ~5.0.5
+    typescript: latest
+    webpack: ^5.76.1
+    webpack-cli: ^5.0.1
+    ws: ^8.11.0
+  languageName: unknown
+  linkType: soft
+
 "@jupyterlab/application-extension@^4.4.1, @jupyterlab/application-extension@workspace:packages/application-extension, @jupyterlab/application-extension@~4.4.1":
   version: 0.0.0-use.local
   resolution: "@jupyterlab/application-extension@workspace:packages/application-extension"
@@ -4616,30 +4642,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jupyterlab/services@^7.4.1, @jupyterlab/services@workspace:packages/services":
-  version: 0.0.0-use.local
-  resolution: "@jupyterlab/services@workspace:packages/services"
+"@jupyterlab/services@npm:^7.4.1":
+  version: 7.4.1
+  resolution: "@jupyterlab/services@npm:7.4.1"
   dependencies:
     "@jupyter/ydoc": ^3.0.4
     "@jupyterlab/coreutils": ^6.4.1
     "@jupyterlab/nbformat": ^4.4.1
     "@jupyterlab/settingregistry": ^4.4.1
     "@jupyterlab/statedb": ^4.4.1
-    "@jupyterlab/testing": ^4.4.1
     "@lumino/coreutils": ^2.2.1
     "@lumino/disposable": ^2.1.4
     "@lumino/polling": ^2.1.4
     "@lumino/properties": ^2.0.3
     "@lumino/signaling": ^2.1.4
-    "@types/jest": ^29.2.0
-    "@types/ws": ^8.5.3
-    jest: ^29.2.0
-    rimraf: ~5.0.5
-    typescript: ~5.5.4
-    webpack: ^5.76.1
-    webpack-cli: ^5.0.1
     ws: ^8.11.0
-  checksum: 9e6667c05f456d9f561b58913143a2b54e1bafedba35a9d67aa5930283c6d40092191262422291e205b0fb540ec2306acbf877aee5ac784c6de2a4108b8f47dc
+  checksum: 0a6e5ad5de07db7cc672248307da891ca1f70447eaf40daa137886992b86e3c939da351ef183cb40896bc3bca41e6c45c13488b777108500436c343eb04769a8
   languageName: node
   linkType: hard
 
@@ -21004,6 +21022,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"typescript@npm:latest":
+  version: 5.8.3
+  resolution: "typescript@npm:5.8.3"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: cb1d081c889a288b962d3c8ae18d337ad6ee88a8e81ae0103fa1fecbe923737f3ba1dbdb3e6d8b776c72bc73bfa6d8d850c0306eed1a51377d2fccdfd75d92c4
+  languageName: node
+  linkType: hard
+
 "typescript@npm:~5.5.4":
   version: 5.5.4
   resolution: "typescript@npm:5.5.4"
@@ -21021,6 +21049,16 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: a58d19ff9811c1764a299dd83ca20ed8020f0ab642906dafc880121b710751227201531fdc99878158205c356ac79679b0b61ac5b42eda0e28bfb180947a258d
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@latest#~builtin<compat/typescript>":
+  version: 5.8.3
+  resolution: "typescript@patch:typescript@npm%3A5.8.3#~builtin<compat/typescript>::version=5.8.3&hash=85af82"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 1b503525a88ff0ff5952e95870971c4fb2118c17364d60302c21935dedcd6c37e6a0a692f350892bafcef6f4a16d09073fe461158547978d2f16fbe4cb18581c
   languageName: node
   linkType: hard
 

@@ -7,6 +7,7 @@ import { IDisposable } from '@lumino/disposable';
 import { Poll } from '@lumino/polling';
 import { IStream, Signal, Stream } from '@lumino/signaling';
 import { ServerConnection } from '../serverconnection';
+import { WebRTC } from '../webrtc';
 
 /**
  * The url for the jupyter-server events service.
@@ -103,16 +104,26 @@ export class EventManager implements Event.IManager {
         return;
       }
 
-      const { appendToken, token, WebSocket, wsUrl } = this.serverSettings;
+      const { appendToken, token, wsUrl } = this.serverSettings;
+
       let url = URLExt.join(wsUrl, SERVICE_EVENTS_URL, 'subscribe');
       if (appendToken && token !== '') {
         url += `?token=${encodeURIComponent(token)}`;
       }
-      const socket = (this._socket = new WebSocket(url));
       const stream = this._stream;
 
-      socket.onclose = () => reject(new Error('EventManager socket closed'));
-      socket.onmessage = msg => msg.data && stream.emit(JSON.parse(msg.data));
+      WebRTC.addActionListener(
+        "events",
+        (data: any) => {
+          console.log("EventManager: ", data);
+          stream.emit(data);
+        }
+      );
+
+      // socket.onclose = () => reject(new Error('EventManager socket closed'));
+
+      // socket.onmessage = msg => msg.data && stream.emit(JSON.parse(msg.data));
+      
     });
   }
 

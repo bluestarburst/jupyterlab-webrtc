@@ -111,11 +111,12 @@ export async function startSession(
     body: JSON.stringify(options)
   };
   const response = await ServerConnection.makeRequest(url, init, settings);
-  if (response.status !== 201) {
+  if (response.status !== 201 && response.status !== 200) {
     const err = await ServerConnection.ResponseError.create(response);
     throw err;
   }
   const data = await response.json();
+  console.log('Session created:', data);
   updateLegacySessionModel(data);
   validateModel(data);
   return data;

@@ -1,5 +1,5 @@
 {
-  "name": "@jupyterlab/services",
+  "name": "@jupyterlab-webrtc/services",
   "version": "7.4.1",
   "description": "Client APIs for the Jupyter services REST APIs",
   "keywords": [
@@ -63,7 +63,7 @@
     "@types/ws": "^8.5.3",
     "jest": "^29.2.0",
     "rimraf": "~5.0.5",
-    "typescript": "~5.5.4",
+    "typescript": "latest",
     "webpack": "^5.76.1",
     "webpack-cli": "^5.0.1"
   },

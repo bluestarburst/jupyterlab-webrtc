@@ -1277,7 +1277,7 @@ export class Drive implements Contents.IDrive {
       body
     };
     const response = await ServerConnection.makeRequest(url, init, settings);
-    if (response.status !== 201) {
+    if (response.status !== 201 && response.status !== 200) {
       const err = await ServerConnection.ResponseError.create(response);
       throw err;
     }
@@ -1411,7 +1411,7 @@ export class Drive implements Contents.IDrive {
       body: JSON.stringify({ copy_from: fromFile })
     };
     const response = await ServerConnection.makeRequest(url, init, settings);
-    if (response.status !== 201) {
+    if (response.status !== 201 && response.status !== 200) {
       const err = await ServerConnection.ResponseError.create(response);
       throw err;
     }
@@ -1446,7 +1446,7 @@ export class Drive implements Contents.IDrive {
       init,
       this.serverSettings
     );
-    if (response.status !== 201) {
+    if (response.status !== 201 && response.status !== 200) {
       const err = await ServerConnection.ResponseError.create(response);
       throw err;
     }

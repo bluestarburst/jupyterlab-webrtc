@@ -103,7 +103,7 @@ export async function startNew(
     body: JSON.stringify(options)
   };
   const response = await ServerConnection.makeRequest(url, init, settings);
-  if (response.status !== 201) {
+  if (response.status !== 201 && response.status !== 200) {
     const err = await ServerConnection.ResponseError.create(response);
     throw err;
   }
