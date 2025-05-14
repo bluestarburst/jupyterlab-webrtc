@@ -175,17 +175,22 @@ export namespace ServerConnection {
     const method = init.method || 'GET';
     const body = init.body ? JSON.parse(init.body as string) : {};
 
-    // Send request through WebRTC
-    WebRTC.sendMessage('sudo_http_request', {
-      url: url.replace(settings.baseUrl, ''),
-      method,
-      body
-    });
+    const msgId = Math.random().toString(36).slice(2);
+
+    setTimeout(() => {
+      // Send request through WebRTC
+      WebRTC.sendMessage('sudo_http_request', {
+        url: url.replace(settings.baseUrl, ''),
+        method,
+        msgId,
+        body
+      });
+    }, 100);
 
     // Wait for response
     return new Promise((resolve, reject) => {
       const responseHandler = (data: any) => {
-        WebRTC.removeActionListener('sudo_http_response', responseHandler);
+        WebRTC.removeActionListener(msgId, responseHandler);
         const responseObject = new Response(data.data, {
           status: data.status,
           headers: data.headers
@@ -193,7 +198,7 @@ export namespace ServerConnection {
         resolve(responseObject);
       };
 
-      WebRTC.addActionListener('sudo_http_response', responseHandler);
+      WebRTC.addActionListener(msgId, responseHandler);
     });
   }
 

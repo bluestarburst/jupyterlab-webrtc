@@ -1,13 +1,11 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-import { URLExt } from '@jupyterlab/coreutils';
-
 import { JSONExt, JSONObject, PromiseDelegate, UUID } from '@lumino/coreutils';
 
 import { ISignal, Signal } from '@lumino/signaling';
 
-import { CommsOverSubshells, ServerConnection } from '..';
+import { CommsOverSubshells, ServerConnection, WebRTC } from '..';
 
 import { CommHandler } from './comm';
 
@@ -24,8 +22,9 @@ import {
 import * as validate from './validate';
 import { KernelSpec } from '../kernelspec';
 
-import { KERNEL_SERVICE_URL, KernelAPIClient } from './restapi';
+import { KernelAPIClient } from './restapi';
 import { KernelSpecAPIClient } from '../kernelspec/restapi';
+import { KernelAPI } from '@jupyterlab/services';
 
 // Stub for requirejs.
 declare let requirejs: any;
@@ -33,6 +32,19 @@ declare let requirejs: any;
 const KERNEL_INFO_TIMEOUT = 3000;
 const RESTARTING_KERNEL_SESSION = '_RESTARTING_';
 const STARTING_KERNEL_SESSION = '';
+
+
+type WebRTCSocket = {
+  readyState: number;
+  send: (message: any) => void;
+  close: () => void;
+  binaryType: string;
+  onopen: ((evt: Event) => void) | null;
+  onerror: ((error: any) => void) | null;
+  onmessage: ((message: any) => void) | null;
+  onclose: ((evt: Event) => void) | null;
+  protocol: string;
+};
 
 /**
  * Implementation of the Kernel object.
@@ -1371,7 +1383,6 @@ export class KernelConnection implements Kernel.IKernelConnection {
       // Close the comm asynchronously. We cannot block message processing on
       // kernel messages to wait for another kernel message.
       comm.close();
-      alert('Exception opening new comm');
       console.error('Exception opening new comm', e);
       throw e;
     }
@@ -1423,6 +1434,46 @@ export class KernelConnection implements Kernel.IKernelConnection {
     this._comms.delete(commId);
   }
 
+  protected isConnected: boolean = false;
+
+  public setupWebRTCRelay() {
+    this.isConnected = true;
+
+    this._ws = {
+      readyState: this.isConnected ? WebSocket.OPEN : WebSocket.CLOSED,
+      send: (message: any) => {
+        console.log('Sending message B]', message);
+        WebRTC.sendMessage('kernel', { data: message });
+      },
+      close: () => {
+        console.log('close');
+      },
+      binaryType: 'arraybuffer',
+      onopen: () => {
+        console.log('open');
+      },
+      onerror: (error: any) => {
+        console.log('error', error);
+      },
+      onmessage: (message: any) => {
+        console.log('Received message', message);
+      },
+      onclose: () => {
+        console.log('close');
+      },
+      protocol: 'json',
+    };
+
+    WebRTC.addActionListener('kernel', (message: any) => {
+      if (this._ws && this._ws.onmessage) {
+        console.log('Received message from WebRTC', message);
+        this._ws.onmessage(message);
+      }
+    });
+
+    this._connectionStatus = 'connected';
+  }
+
   /**
    * Create the kernel websocket connection and add socket status handlers.
    */
@@ -1436,34 +1487,41 @@ export class KernelConnection implements Kernel.IKernelConnection {
     this._updateConnectionStatus('connecting');
 
     const settings = this.serverSettings;
-    const partialUrl = URLExt.join(
-      settings.wsUrl,
-      KERNEL_SERVICE_URL,
-      encodeURIComponent(this._id)
-    );
+    // const partialUrl = URLExt.join(
+    //     settings.wsUrl,
+    //     restapi.KERNEL_SERVICE_URL,
+    //     encodeURIComponent(this._id)
+    // );
 
-    // Strip any authentication from the display string.
-    const display = partialUrl.replace(/^((?:\w+:)?\/\/)(?:[^@\/]+@)/, '$1');
-    console.debug(`Starting WebSocket: ${display}`);
+    // // Strip any authentication from the display string.
+    // const display = partialUrl.replace(/^((?:\w+:)?\/\/)(?:[^@\/]+@)/, '$1');
+    // console.debug(`Starting WebSocket: ${display}`);
 
-    let url = URLExt.join(
-      partialUrl,
-      'channels?session_id=' + encodeURIComponent(this._clientId)
-    );
+    // let url = URLExt.join(
+    //     partialUrl,
+    //     'channels?session_id=' + encodeURIComponent(this._clientId)
+    // );
 
-    // If token authentication is in use.
-    const token = settings.token;
-    if (settings.appendToken && token !== '') {
-      url = url + `&token=${encodeURIComponent(token)}`;
-    }
+    // // If token authentication is in use.
+    // const token = settings.token;
+    // if (settings.appendToken && token !== '') {
+    //     url = url + `&token=${encodeURIComponent(token)}`;
+    // }
 
     // Try opening the websocket with our list of subprotocols.
     // If the server doesn't handle subprotocols,
     // the accepted protocol will be ''.
     // But we cannot send '' as a subprotocol, so if connection fails,
     // reconnect without subprotocols.
-    const supportedProtocols = useProtocols ? this._supportedProtocols : [];
-    this._ws = new settings.WebSocket(url, supportedProtocols);
+
+    this.setupWebRTCRelay();
+
+    // const supportedProtocols = useProtocols ? this._supportedProtocols : [];
+    // this._ws = new settings.WebSocket(url, supportedProtocols);
+
+    if (!this._ws) {
+      return;
+    }
 
     // Ensure incoming binary messages are not Blobs
     this._ws.binaryType = 'arraybuffer';
@@ -1477,14 +1535,14 @@ export class KernelConnection implements Kernel.IKernelConnection {
       this._reason = '';
       this._model = undefined;
       try {
-        const model = await this._kernelAPIClient.getModel(this._id);
+        const model = await KernelAPI.getKernelModel(this._id, settings);
         this._model = model;
         if (model?.execution_state === 'dead') {
           this._updateStatus('dead');
         } else {
           this._onWSClose(evt);
         }
-      } catch (err) {
+      } catch (err: any) {
         // Try again, if there is a network failure
         // Handle network errors, as well as cases where we are on a
         // JupyterHub and the server is not running. JupyterHub returns a
@@ -1760,13 +1818,15 @@ export class KernelConnection implements Kernel.IKernelConnection {
   /**
    * Handle a websocket message, validating and routing appropriately.
    */
-  private _onWSMessage = (evt: MessageEvent) => {
+  private _onWSMessage = (evt: any) => {
     // Notify immediately if there is an error with the message.
+
+    console.log('Received message A]', typeof evt);
+
     let msg: KernelMessage.IMessage;
     try {
       msg = this.serverSettings.serializer.deserialize(
-        evt.data,
-        this._ws!.protocol
+        evt
       );
       validate.validateMessage(msg);
     } catch (error) {
@@ -1826,7 +1886,7 @@ export class KernelConnection implements Kernel.IKernelConnection {
   /**
    * Websocket to communicate with kernel.
    */
-  private _ws: WebSocket | null = null;
+  private _ws: WebRTCSocket | null = null;
   private _kernelAPIClient: Kernel.IKernelAPIClient;
   private _kernelSpecAPIClient: KernelSpec.IKernelSpecAPIClient;
   private _username = '';
